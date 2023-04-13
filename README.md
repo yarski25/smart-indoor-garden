@@ -25,4 +25,4 @@
 
 ## About The Project
 
-Arduino project is built with arduino IDE
+Arduino project is built with Platform IO
