@@ -4,7 +4,7 @@
 // Author: Yaroslav Saprykin
 // Date: 13/4/2023
 // HW =>
-// watel level sensor to detect water tank state
+// capacity moisture sensor to detect water tank state
 // water pump 5V
 // grow lamp
 // 2-channel relay to control water pump and grow lamp
@@ -38,14 +38,9 @@ const long  gmtOffset_sec = 0;
 const int   daylightOffset_sec = 0;
 
 // HW configs
-#define WLS_PIN 33 // Arduino pin that connects to analog pin of water level sensor (WLS)
-#define WLS_LOW 1200 // low level of WLS
-#define WLS_HIGH 2200 // high level of WLS
-
-#define RELAY_PIN 32  // Arduino pin that connects to relay
-
-unsigned long myTime1;
-unsigned long myTime2;
+#define CMS_PIN 33 // Arduino pin that connects to analog pin of capacity moisture sensor (CMS)
+#define CMS_AIR 3200 // low level of CMS
+#define CMS_WATER 1200 // high level of CMS
 
 // CMS intervals (air, wet, water)
 // VERY wET <230;330>
@@ -54,6 +49,10 @@ unsigned long myTime2;
 
 //int intervals = (AIR_VALUE - WATER_VALUE)/3;
 
+#define RELAY_PIN 32  // Arduino pin that connects to relay
+
+unsigned long myTime1;
+unsigned long myTime2;
 
 // Handle what happens when you receive new messages
 void handleNewMessages(int numNewMessages) {
@@ -76,9 +75,11 @@ void handleNewMessages(int numNewMessages) {
     
     if (text == "/water_status") {
 
-      int waterLevel = analogRead(WLS_PIN);
-      waterLevel = map(waterLevel, WLS_LOW, WLS_HIGH, 0, 100);
+      int waterLevel = analogRead(CMS_PIN);
+      //bot.sendMessage(chat_id, "water level value is " + String(waterLevel), "");
+      waterLevel = map(waterLevel, CMS_AIR, CMS_WATER, 0, 100);
       bot.sendMessage(chat_id, "water level is " + String(waterLevel) + "% ", "");
+      delay(500);
       if (waterLevel > 80){
         bot.sendMessage(chat_id, "water level is HIGH, system OK", "");
       }
@@ -87,34 +88,39 @@ void handleNewMessages(int numNewMessages) {
       }
       else{
         bot.sendMessage(chat_id, "water level is too LOW, please refill water tank", "");
+        delay(500);
         bot.sendMessage(chat_id, "irrigation system operation is limited", "");
       }
+      delay(500);
     }
 
     if (text == "/water_pump_on") {
 
-      int waterLevel = analogRead(WLS_PIN);
-      waterLevel = map(waterLevel, WLS_LOW, WLS_HIGH, 0, 100);
+      int waterLevel = analogRead(CMS_PIN);
+      waterLevel = map(waterLevel, CMS_AIR, CMS_WATER, 0, 100);
       bot.sendMessage(chat_id, "water level is " + String(waterLevel) + "% ", "");
-
+      delay(500);
       bot.sendMessage(chat_id, "water pump ON", "");
+      delay(500);
       myTime1 = millis();
       digitalWrite(RELAY_PIN, LOW);
       Serial.println("water pump ON");
-      delay(1000);
+      delay(5000);
       digitalWrite(RELAY_PIN, HIGH);
       Serial.println("water pump OFF");
       myTime2 = millis();
       bot.sendMessage(chat_id, "water pump OFF", "");
+      delay(500);
       Serial.print("water pump operated for ");
       Serial.print((myTime2-myTime1));
       Serial.println("ms");
       bot.sendMessage(chat_id, "water pump operated for " + String(myTime2-myTime1) + "ms", "");
       delay(60000);
       
-      waterLevel = analogRead(WLS_PIN);
-      waterLevel = map(waterLevel, WLS_LOW, WLS_HIGH, 0, 100);
+      waterLevel = analogRead(CMS_PIN);
+      waterLevel = map(waterLevel, CMS_AIR, CMS_WATER, 0, 100);
       bot.sendMessage(chat_id, "water level is " + String(waterLevel) + "% ", "");
+      delay(500);
     }
 
     if (text == "/start")
@@ -125,6 +131,7 @@ void handleNewMessages(int numNewMessages) {
       html_msg += "<a href='/water_pump_on'>/water_pump_on</a> -> <em>set water pump ON</em>\n";
 
       bot.sendMessage(chat_id, html_msg, "HTML");
+      delay(500);
     }
   }
 }
@@ -192,8 +199,9 @@ void setup() {
   printLocalTime();
 
   bot.sendMessage(CHAT_ID, "bot started", "");
+  delay(500);
 
-  pinMode(WLS_PIN, INPUT);
+  pinMode(CMS_PIN, INPUT);
   delay(100);
   //analogReadResolution(12);                   // Sets the sample bits and read resolution, default is 12-bit (0 - 4095), range is 9 - 12 bits
   //delay(100);
