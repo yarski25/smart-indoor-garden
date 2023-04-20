@@ -21,6 +21,7 @@
 #include <UniversalTelegramBot.h>
 #include <ArduinoJson.h>
 #include "time.h"
+#include <regex>
 
 #ifdef ESP8266
   X509List cert(TELEGRAM_CERTIFICATE_ROOT);
@@ -53,6 +54,25 @@ const int   daylightOffset_sec = 0;
 
 unsigned long myTime1;
 unsigned long myTime2;
+
+enum State{no_action, water_pump_on};
+State actualState = no_action;
+
+// function to check if string is valid number
+boolean isValidNumber(String str) {
+  if(str.charAt(1) == '0'){
+    return false;
+  }
+    
+  for(byte i=1;i<str.length();i++){
+    if(!isDigit(str.charAt(i))){
+      return false;
+    }
+  }
+
+  return true;
+}
+
 
 // Handle what happens when you receive new messages
 void handleNewMessages(int numNewMessages) {
@@ -96,31 +116,49 @@ void handleNewMessages(int numNewMessages) {
 
     if (text == "/water_pump_on") {
 
-      int waterLevel = analogRead(CMS_PIN);
-      waterLevel = map(waterLevel, CMS_AIR, CMS_WATER, 0, 100);
-      bot.sendMessage(chat_id, "water level is " + String(waterLevel) + "% ", "");
+      bot.sendMessage(chat_id, "please enter pump operation time in ms: ", "");
       delay(500);
-      bot.sendMessage(chat_id, "water pump ON", "");
-      delay(500);
-      myTime1 = millis();
-      digitalWrite(RELAY_PIN, LOW);
-      Serial.println("water pump ON");
-      delay(5000);
-      digitalWrite(RELAY_PIN, HIGH);
-      Serial.println("water pump OFF");
-      myTime2 = millis();
-      bot.sendMessage(chat_id, "water pump OFF", "");
-      delay(500);
-      Serial.print("water pump operated for ");
-      Serial.print((myTime2-myTime1));
-      Serial.println("ms");
-      bot.sendMessage(chat_id, "water pump operated for " + String(myTime2-myTime1) + "ms", "");
-      delay(60000);
-      
-      waterLevel = analogRead(CMS_PIN);
-      waterLevel = map(waterLevel, CMS_AIR, CMS_WATER, 0, 100);
-      bot.sendMessage(chat_id, "water level is " + String(waterLevel) + "% ", "");
-      delay(500);
+
+      actualState = water_pump_on;
+
+    }
+
+    if (isValidNumber(text)) {
+
+      int duration = text.substring(1).toInt();
+
+      if (actualState == water_pump_on){
+
+        int waterLevel = analogRead(CMS_PIN);
+        waterLevel = map(waterLevel, CMS_AIR, CMS_WATER, 0, 100);
+        bot.sendMessage(chat_id, "water level is " + String(waterLevel) + "% ", "");
+        delay(500);
+        bot.sendMessage(chat_id, "water pump ON", "");
+        delay(500);
+        myTime1 = millis();
+        digitalWrite(RELAY_PIN, LOW);
+        Serial.println("water pump ON");
+        delay(duration);
+        digitalWrite(RELAY_PIN, HIGH);
+        Serial.println("water pump OFF");
+        myTime2 = millis();
+        bot.sendMessage(chat_id, "water pump OFF", "");
+        delay(500);
+        Serial.print("water pump operated for ");
+        Serial.print((myTime2-myTime1));
+        Serial.println("ms");
+        bot.sendMessage(chat_id, "water pump operated for " + String(myTime2-myTime1) + "ms", "");
+        delay(60000);
+        
+        waterLevel = analogRead(CMS_PIN);
+        waterLevel = map(waterLevel, CMS_AIR, CMS_WATER, 0, 100);
+        bot.sendMessage(chat_id, "water level is " + String(waterLevel) + "% ", "");
+        delay(500);
+
+        actualState = no_action;
+
+      }
+
     }
 
     if (text == "/start")
